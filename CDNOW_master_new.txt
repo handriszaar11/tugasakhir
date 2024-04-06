@@ -1,0 +1,5 @@
+id_customer,tanggal_transaksi,jumlah_transaksi,total_pembelian
+WSH001 ,01/07/2023,11,42000
+WSH002,01/07/2023,13,165000
+WSH003,01/07/2023,21,14500
+WSH004,01/07/2023,5,20000
