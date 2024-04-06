@@ -20,7 +20,7 @@ from pathlib import Path
 import streamlit_authenticator as sa
 from streamlit_extras.switch_page_button import switch_page
 from st_pages import Page, show_pages, add_page_title
-
+import matplotlib as plt
 
 no_sidebar_style = """
     <style>
