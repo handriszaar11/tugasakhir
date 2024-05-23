@@ -1,7 +1,7 @@
 pandas
 seaborn  
 plotly.express
-pickle  
+pickle5  
 streamlit
 sklearn
 datetime
