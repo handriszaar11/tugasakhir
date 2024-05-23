@@ -13,4 +13,4 @@ re
 mlxtend
 pathlib
 streamlit_authenticator
-matplotlib.pyplot  plt
+matplotlib.pyplot
