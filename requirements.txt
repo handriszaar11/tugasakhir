@@ -1,0 +1,16 @@
+pandas
+seaborn  
+plotly.express
+pickle  
+streamlit
+sklearn
+datetime
+squarify 
+base64
+csv
+sys
+re
+mlxtend
+pathlib
+streamlit_authenticator
+matplotlib.pyplot  plt

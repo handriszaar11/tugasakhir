@@ -12,7 +12,7 @@ import base64
 import csv
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
-
+import io
 import re
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import fpgrowth
@@ -21,6 +21,9 @@ from pathlib import Path
 import streamlit_authenticator as sa
 from streamlit_extras.switch_page_button import switch_page
 from st_pages import Page, show_pages, add_page_title
+from sentry_sdk import capture_exception
+
+
 
 no_sidebar_style = """
     <style>
@@ -33,18 +36,38 @@ st.markdown(no_sidebar_style, unsafe_allow_html=True)
 
 st.sidebar.title("Segmentasi Pelanggan")
 
+
+
 sc=[ "Data Understanding","Data preparation","Modeling & Evaluation"]
-choice=st.sidebar.radio("Pilih Menu Dibawah",sc)
+choice= st.sidebar.radio("Pilih Menu Dibawah",sc)
+
 
 def load_data(uploaded_file):
-    if uploaded_file is not None:
-        st.sidebar.success("File uploaded successfully!")
-        columns = ['id_transaksi','id_customer', 'tanggal_transaksi', 'jumlah_transaksi', 'total_transaksi', 'item_transaksi']
-        df = pd.read_csv(uploaded_file, encoding='Latin-1', sep=',', header=0, engine='python', on_bad_lines='skip', quoting=csv.QUOTE_NONE, names=columns)
+    try:
+        # Expected columns template
+        expected_columns = ['id_transaksi', 'id_customer', 'tanggal_transaksi', 'jumlah_transaksi', 'total_transaksi', 'item_transaksi']
+        
+        # Read the uploaded file
+        df = pd.read_csv(uploaded_file, encoding='Latin-1', sep=',', header=0, engine='python', on_bad_lines='skip', quoting=csv.QUOTE_NONE)
+
+        # Check if the columns in the uploaded file match the expected columns
+        if list(df.columns) != expected_columns:
+            raise ValueError("Kolom File Tidak Sesuai Dengan Template")
+        
+        # Store the DataFrame in the session state if columns are correct
+        st.success("File berhasil dibaca.")
         st.session_state['df'] = df
         return df
-    else:
-        st.write("Please upload a data file to proceed.")
+    
+    except ValueError as ve:
+        st.error(str(ve))
+        st.session_state['df'] = None
+        return None
+    
+    except Exception as e:
+        st.error("Terjadi kesalahan saat membaca file.")
+        st.write(e)
+        st.session_state['df'] = None
         return None
 
     # Berfungsi untuk menghasilkan tautan unduhan CSV
@@ -73,9 +96,8 @@ def csv_download_link(df, csv_file_name, download_link_csv):
         b64_csv = base64.b64encode(csv_data).decode('utf-8')
 
         # Create a downloadable link for the CSV file
-        
-        
-if choice == 'Data Understanding':    
+def data_understanding():
+    try:    
         st.title("Data Understanding")
         st.header("", divider='rainbow')
         # Daftar semua file di direktori 'sample_data'
@@ -85,6 +107,7 @@ if choice == 'Data Understanding':
         data_source = st.sidebar.radio('Data source', ['Use a sample file', 'Upload a new file'])
         
         if data_source == 'Use a sample file':
+            st.sidebar.warning("Pilih File Sesuai Dengan Template")
             # Memungkinkan pengguna memilih file dari daftar
             selected_file = st.sidebar.selectbox('Choose a sample file', sample_files)
             
@@ -92,17 +115,29 @@ if choice == 'Data Understanding':
             file_path = os.path.join('data', selected_file)
             st.session_state['uploaded_file'] = open(file_path, 'r')
             load_data(st.session_state['uploaded_file'])
-
         else:
             # Memungkinkan pengguna mengunggah file baru
+            st.session_state.clear()
+            st.sidebar.warning("Upload File Sesuai Dengan Template")
             st.session_state['uploaded_file'] = st.sidebar.file_uploader("Choose a file", type=['csv'])
+            template_file = pd.read_csv('data/template.csv')
+            def to_csv(df):
+                output = io.StringIO()
+                df.to_csv(output, index=False)
+                processed_data = output.getvalue()
+                return processed_data
+            template_file_download = to_csv(template_file)
+            
+
+            st.sidebar.download_button(label="Download Template File",data=template_file_download, file_name="template.csv", mime="text/csv")
             
             if st.session_state['uploaded_file'] is not None:
                 load_data(st.session_state['uploaded_file'])
-
+                st.sidebar.success("File Berhasil Diupload")
+            else:
+                st.error("Silahkan Upload File Terlebih Dahulu")
         # st.session_state['uploaded_file'] = st.sidebar.file_uploader("Choose a file", type=['txt'])
-        # load_data(st.session_state['uploaded_file'])
-        
+        # load_data(st.session_state['uploaded_file']) 
         if st.session_state['df'] is not None:
             st.write("### Data Overview")
             st.write("Number of rows:", st.session_state['df'].shape[0])
@@ -141,17 +176,23 @@ if choice == 'Data Understanding':
             dfm = st.session_state['df'].groupby('month')['total_transaksi'].sum()
             fig, ax = plt.subplots()
             ax.plot(dfm.index.astype(str), dfm, label='Total Penjualan', marker='o')
-
+            st.session_state['data_understanding_done'] = True
 
             # Plot the total Quantity per month
             #  
             # st.pyplot(fig)
-
-if choice == 'Data preparation': 
+        else:
+            st.session_state['df'] = None
+    except Exception as e:
+        capture_exception(e)
+        # st.error("Silahkan Upload File Terlebih Dahulu")        
+def data_preparation():
+    try:
         st.title("Data Pre-Processing")
         st.header("", divider='rainbow')
-        st.write("### Data Cleaning")
+        
         if st.session_state['df'] is not None:
+            st.write("### Data Cleaning")
             st.session_state['df']['id_customer'] = st.session_state['df']['id_customer'].str.strip().str.lower()
         
             # 1. Handling missing, null, and duplicate values
@@ -183,16 +224,18 @@ if choice == 'Data preparation':
             
             st.session_state['df']['tanggal_transaksi'] = pd.to_datetime(st.session_state['df']['tanggal_transaksi'])
 
-
+            st.session_state['data_preparation_done'] = True
             # ... (rest of your code, don't forget to modify scatter plots too)
         else:
-            st.write("No data available. Please upload a file in the 'Data Understanding' section.")
-        
-
-if choice == 'Modeling & Evaluation':
+            st.error("No data available. Please upload a file in the 'Data Understanding' section.")
+    except Exception as e:
+        capture_exception(e)
+        st.error("Silahkan Upload File Terlebih Dahulu")
+def modelling():
+    try:
         st.title("Modelling K-Means")
         st.header("", divider='rainbow')
-        if st.session_state['df'] is not None and st.session_state['df'].shape[0] > 0:
+        if st.session_state['df'] is not None and st.session_state['df'].shape[0] > 0 :
             # RFM Analysis
             recent_date = st.session_state['df']['tanggal_transaksi'].max()
             # Calculate Recency, Frequency, and Monetary value for each customer
@@ -221,7 +264,7 @@ if choice == 'Modeling & Evaluation':
 
             # Membangun dan menampilkan grafik Elbow Method
             sse = {}
-            for k in range(1, 20):
+            for k in range(1, 10):
                 kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
                 kmeans.fit(df_RFM_normalized)
                 sse[k] = kmeans.inertia_
@@ -245,20 +288,53 @@ if choice == 'Modeling & Evaluation':
             st.subheader('Hasil Clustering')
             st.dataframe(kmeans)
             kmeans_data = kmeans.groupby('Segmen').agg({'Segmen':'count'})
+            st.write('### Jumlah Pelanggan Setiap Segmen')
             kmeans_data.columns = ['Jumlah Pelanggan']
             st.dataframe(kmeans_data)
             def func(row):
-                if row['Segmen'] == 3:
-                    return 'Old Customer'
-                elif row['Segmen'] == 2:
-                    return 'Loyal Customer'
-                elif row['Segmen'] == 1:
-                    return 'Active Customer'
-                else:
-                    return 'New Customer'
+                    if row['Segmen'] == 3:
+                        return 'Pelanggan Tidak Aktif'
+                    elif row['Segmen'] == 2:
+                        return 'Pelanggan Aktif'
+                    elif row['Segmen'] == 1:
+                        return 'Pelanggan Baru'
+                
             kmeans['Segmen'] = kmeans.apply(func, axis=1)
-            st.subheader('Hasil Clustering')
-            st.dataframe(kmeans)
+            
+            def labelbaru(row, cluster_labels):
+                for i, label in enumerate(cluster_labels):
+                    if row['Segmen'] == i+1:
+                        return label if label else f'Segmen {i+1}'
+            st.warning("Jika ingin mengubah label, silahkan isi form dibawah ini")
+            with st.form(key='label_form'):
+                st.write('### Form Ubah Label Segmen')
+                cluster_labels = []
+                for i in range(n_clusters):
+                    label = st.text_input(f'Label untuk Segmen {i+1}', key=f'label_{i}')
+                    cluster_labels.append(label)
+                
+                submit = st.form_submit_button('Submit')
+                
+            if submit:
+                kmeans =  df_RFM_normalized.copy()
+                kmeans['Segmen'] = (model.labels_ +1)
+                kmeans['Segmen'] = kmeans.apply(labelbaru, args=(cluster_labels,), axis=1)
+                st.success('Label telah diubah. ')
+            if st.button('Reset Label'):
+                kmeans =  df_RFM_normalized.copy()
+                kmeans['Segmen'] = (model.labels_ +1)
+                kmeans['Segmen'] = kmeans.apply(func, axis=1)
+                st.success('Label telah direset. ')
+            # if resetlabel:
+            #     # kmeans =  df_RFM_normalized.copy()
+            #     # kmeans['Segmen'] = (model.labels_ +1)
+            #     kmeans['Segmen'] = kmeans.apply(func, axis=1)
+            #     st.success('Label telah direset. ')               
+
+                
+            st.subheader('Hasil Clustering Setelah Diberi Label')
+            st.dataframe(kmeans, width=1500, height=500)
+
             
             kmeans['id_customer'] = df_RFM.index
             top_loyal_customers = kmeans.nlargest(5, 'Frequency')
@@ -297,10 +373,11 @@ if choice == 'Modeling & Evaluation':
             st.plotly_chart(fig_bar, use_container_width=True)
             
             # Informasi Penjualan Barang
-            item_transaksi = st.session_state['df']
-            item_transaksi['item_transaksi'] = item_transaksi['item_transaksi'].str.replace(';','')
-            item_transaksi.reset_index(drop=True, inplace=True)
+            item_transaksi = st.session_state['df'].copy()
             
+            item_transaksi['item_transaksi'] = item_transaksi['item_transaksi'].str.replace(';','', regex=False)
+            item_transaksi.reset_index(drop=True, inplace=True)
+           
             item_transaksi['item_transaksi'] = item_transaksi['item_transaksi'].apply(lambda x: [re.sub(r'\(\d+\)', ',', item).strip().rstrip(',') for item in x.split(',') ])
     
         
@@ -314,6 +391,10 @@ if choice == 'Modeling & Evaluation':
             te_df = pd.DataFrame(te_ary, columns=te.columns_)
             data_item_tanggal = pd.concat([item_transaksi['month'], te_df], axis=1)
             data_item_tanggal = data_item_tanggal.groupby('month').agg('sum')
+            st.write('### Informasi Produk')
+            produk = 'data/produk.csv'
+            nama_produk = pd.read_csv(produk, sep=',')
+            st.dataframe(nama_produk, width=1500, height=500)
             st.write("#### Data Item Transaksi Per Bulan")
             st.dataframe(data_item_tanggal)
             st.plotly_chart(px.bar(data_item_tanggal, barmode='group', title='Diagram Data Item Transaksi Per Bulan'), use_container_width=True)
@@ -337,16 +418,26 @@ if choice == 'Modeling & Evaluation':
             # st.write("#### Item Per Transaksi Dalam Setiap Transaksi")
             # st.dataframe(df)
             # st.dataframe(data_item_transaksi)
+         
+        else:
+            st.error("No data available. Please upload a file in the 'Data Understanding' section.")
+    except Exception as e:
+        capture_exception(e)
+        st.error("Silahkan Upload File Terlebih Dahulu dan Lakukan Data Pre-Processing")
             
         
-            
-            
-           
-            
-            
-            
-        else:
-            st.write("No data available. Please upload a file in the 'Data Understanding' section.")
-
+if choice == 'Data Understanding':    
+    data_understanding()
+elif choice == 'Data preparation':
+    if 'data_understanding_done' in st.session_state and st.session_state['data_understanding_done']:
+        data_preparation()
+    else:
+        st.warning("Selesaikan Data Understanding terlebih dahulu.") 
+if choice == 'Modeling & Evaluation':
+    if 'data_preparation_done' in st.session_state and st.session_state['data_preparation_done']:
+        modelling()
+    else:
+        st.warning("Selesaikan Data Preparation terlebih dahulu.")
+    
 if st.sidebar.button(":derelict_house_building: Back to Home"):
     st.switch_page("app.py")

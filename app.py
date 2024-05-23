@@ -11,7 +11,7 @@ import squarify as squarify
 import base64
 import csv
 from sklearn.preprocessing import StandardScaler
-
+import sys
 import re
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import fpgrowth
@@ -20,7 +20,8 @@ from pathlib import Path
 import streamlit_authenticator as sa
 from streamlit_extras.switch_page_button import switch_page
 from st_pages import Page, show_pages, add_page_title
-import matplotlib as plt
+import matplotlib.pyplot as plt
+
 
 no_sidebar_style = """
     <style>
@@ -43,7 +44,7 @@ for un, name, pw in zip(usernames, names, hashed_password):
     user_dict = {"name":name,"password":pw}
     credentials["usernames"].update({un:user_dict})
 
-authenticator = sa.Authenticate(credentials, "app_home", "auth", cookie_expiry_days=30)
+authenticator = sa.Authenticate(credentials, "app_home", "auth", cookie_expiry_days=1)
 name, authentication_status, username = authenticator.login("main")
 
 if authentication_status == False:
@@ -56,6 +57,7 @@ if authentication_status == True:
     st.sidebar.write("<h5 style='text-align: center; color: black;'>Sistem Segmentasi dan Penentuan Rekomendasi Produk</h5>", unsafe_allow_html=True)
     st.sidebar.header("Hi, :blue[{}] :man-raising-hand:  ".format(name), )  
     if st.sidebar.button(":desktop_computer: Tentang Aplikasi", use_container_width=True, key="tentang"):
+        st.empty()
         st.title("Tentang Aplikasi")
         st.subheader("", divider='rainbow')
         st.write("Aplikasi ini merupakan aplikasi yang digunakan untuk melakukan segmentasi pelanggan dan rekomendasi produk.")
@@ -65,13 +67,11 @@ if authentication_status == True:
         st.title("Rekomendasi Produk")
         st.subheader("", divider='rainbow')
         st.write("Rekomendasi produk merupakan proses memberikan rekomendasi produk kepada pelanggan berdasarkan karakteristik pelanggan tersebut. Rekomendasi produk ini dilakukan untuk memberikan rekomendasi produk yang sesuai dengan karakteristik pelanggan.")
-        st.title("Download Template File")
-        st.subheader("", divider='rainbow')
-        st.download_button(label="Download Template File", data="data/template.csv", file_name="template.csv", mime="text/csv")
     if st.sidebar.button(":bar_chart: Dashboard", use_container_width=True, key="dashboard"):
         st.empty()
         st.header("Dashboard")
         st.subheader("", divider='rainbow')
+        
         df = pd.read_csv("data/segmentasicustomerwsh.csv")
         user_grouped = df.groupby('id_customer').agg({'jumlah_transaksi': 'sum', 'total_transaksi': 'sum'})
         fig_bar = px.bar(user_grouped, x=user_grouped.index, y='total_transaksi', color='jumlah_transaksi', title='Total Transaksi per Customer')
@@ -94,8 +94,6 @@ if authentication_status == True:
         dfm = df.groupby('month')['total_transaksi'].sum()
         fig, ax = plt.subplots()
         ax.plot(dfm.index.astype(str), dfm, label='Total Penjualan', marker='o')
-
-
             # Plot the total Quantity per month
         st.write("### Total Quantity per Month")
         dfpc = df.groupby('month')['jumlah_transaksi'].sum()
