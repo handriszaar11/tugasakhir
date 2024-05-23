@@ -14,3 +14,4 @@ mlxtend
 pathlib
 streamlit_authenticator
 matplotlib.pyplot
+sentry_sdk
