@@ -3,7 +3,7 @@ seaborn
 plotly.express
 pickle5  
 streamlit
-sklearn
+scikit-learn
 datetime
 squarify 
 base64
