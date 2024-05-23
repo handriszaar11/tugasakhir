@@ -5,8 +5,7 @@ pickle5
 streamlit
 scikit-learn
 datetime
-squarify 
-base64
+squarify == 0.4.3
 csv
 sys
 re
