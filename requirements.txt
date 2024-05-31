@@ -6,7 +6,6 @@ streamlit
 scikit-learn
 datetime
 squarify 
-csv
 sys
 re
 mlxtend
