@@ -5,7 +5,7 @@ pickle5
 streamlit
 scikit-learn
 datetime
-squarify == 0.4.3
+squarify == 0.0.12
 csv
 sys
 re
@@ -14,3 +14,4 @@ pathlib
 streamlit_authenticator
 matplotlib.pyplot
 sentry_sdk
+base64
