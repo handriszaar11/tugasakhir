@@ -5,7 +5,7 @@ pickle5
 streamlit
 scikit-learn
 datetime
-squarify == 0.0.12
+squarify 
 csv
 sys
 re
