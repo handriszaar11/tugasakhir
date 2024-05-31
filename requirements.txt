@@ -12,3 +12,4 @@ streamlit_authenticator
 matplotlib
 sentry_sdk
 streamlit_extras
+st_pages
