@@ -11,4 +11,3 @@ pathlib
 streamlit_authenticator
 matplotlib
 sentry_sdk
-base64
