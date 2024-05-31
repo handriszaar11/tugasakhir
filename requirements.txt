@@ -9,6 +9,6 @@ squarify
 mlxtend
 pathlib
 streamlit_authenticator
-matplotlib.pyplot
+matplotlib
 sentry_sdk
 base64
