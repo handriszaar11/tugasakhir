@@ -125,9 +125,9 @@ def data_overview():
         # else:
         #     st.error("No data available. Please upload a file in the 'Data Overview' section.")
     except Exception as e:
-        st.error("Terjadi kesalahan saat membaca file.")
-        st.write(e)
-        st.session_state['df'] = None
+        st.error("Upload File Terlebih Dahulu!")
+        # st.write(e)
+        # st.session_state['df'] = None
 
 def data_preprocessing():
     try:
@@ -220,8 +220,8 @@ def modelling_fpgrowth():
                 labels={'item': 'Produk', 'frequency': 'Frekuensi'}
             )
             st.plotly_chart(fig_bar, use_container_width=True)
-            st.subheader('Minimal Support Frequent Itemset')
-            min_support = st.number_input('Tulis Minimal Support Untuk Frequent Itemset', min_value=0.01, max_value=1.0, value=0.03, step=0.01, key="min_support_value")
+            st.subheader('Minimal Support')
+            min_support = st.number_input('Tulis Minimal Support', min_value=0.01, max_value=1.0, value=0.02, step=0.01, key="min_support_value")
             st.write(f'Anda telah memilih minimal support sebesar {min_support * 100} % ')
             st.write("#### Frequent Itemsets")
             frequent_item = fpgrowth(df, min_support=min_support, use_colnames=True)
